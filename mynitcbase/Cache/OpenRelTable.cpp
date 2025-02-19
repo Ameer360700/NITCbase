@@ -181,7 +181,7 @@ int OpenRelTable::openRel(char relName[ATTR_SIZE])
       before calling linearSearch().*/
 
   // relcatRecId stores the rec-id of the relation `relName` in the Relation Catalog.
-  RecId relcatRecId=BlockAccess::linearSearch(RELCAT_RELID,RELCAT_ATTR_RELNAME,relcatrelname,EQ);
+  RecId relcatRecId=BlockAccess::linearSearch(RELCAT_RELID,(char*)RELCAT_ATTR_RELNAME,relcatrelname,EQ);
 
   if (relcatRecId.block==-1 && relcatRecId.slot==-1) 
   {
@@ -217,7 +217,7 @@ int OpenRelTable::openRel(char relName[ATTR_SIZE])
   {
       /* let attrcatRecId store a valid record id an entry of the relation, relName,
       in the Attribute Catalog.*/
-      RecId attrcatRecId=BlockAccess::linearSearch(ATTRCAT_RELID,ATTRCAT_ATTR_RELNAME,relcatrelname,EQ);
+      RecId attrcatRecId=BlockAccess::linearSearch(ATTRCAT_RELID,(char*)ATTRCAT_ATTR_RELNAME,relcatrelname,EQ);
       AttrCacheEntry*attrCacheEntry=(AttrCacheEntry*)malloc(sizeof(AttrCacheEntry));
       Attribute attrcatrecord[ATTRCAT_NO_ATTRS];
       RecBuffer attrcatblock(attrcatRecId.block);
