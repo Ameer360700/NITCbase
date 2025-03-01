@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstring>
 
-int Schema::openRel(char relName[ATTR_SIZE]) 
+int Schema::openRel(char*relName) 
 {
     int ret = OpenRelTable::openRel(relName);
   
@@ -19,7 +19,7 @@ int Schema::openRel(char relName[ATTR_SIZE])
     return ret;
 }
   
-int Schema::closeRel(char relName[ATTR_SIZE]) 
+int Schema::closeRel(char*relName) 
 {
     if (!strcmp(relName,RELCAT_RELNAME) || !strcmp(relName,ATTRCAT_RELNAME))
     {
@@ -37,4 +37,51 @@ int Schema::closeRel(char relName[ATTR_SIZE])
   
     return OpenRelTable::closeRel(relId);
 }
+
+int Schema::renameRel(char *oldRelName, char*newRelName) 
+{
+  // if the oldRelName or newRelName is either Relation Catalog or Attribute Catalog,
+      // return E_NOTPERMITTED
+      // (check if the relation names are either "RELATIONCAT" and "ATTRIBUTECAT".
+      // you may use the following constants: RELCAT_RELNAME and ATTRCAT_RELNAME)
+  if (!strcmp(oldRelName, RELCAT_RELNAME) || !strcmp(oldRelName, ATTRCAT_RELNAME)) 
+  {
+    return E_NOTPERMITTED;
+  }
+  if (!strcmp(newRelName, RELCAT_RELNAME) || !strcmp(newRelName, ATTRCAT_RELNAME)) 
+  {
+    return E_NOTPERMITTED;
+  }
+  // if the relation is open
+  //    (check if OpenRelTable::getRelId() returns E_RELNOTOPEN)
+  //    return E_RELOPEN
+  if (OpenRelTable::getRelId(oldRelName) != E_RELNOTOPEN) 
+  {
+    return E_RELOPEN;
+  }
   
+  int retVal = BlockAccess::renameRelation(oldRelName, newRelName);
+  return retVal;
+}
+
+int Schema::renameAttr(char *relName, char *oldAttrName, char *newAttrName) 
+{
+  // if the relName is either Relation Catalog or Attribute Catalog,
+      // return E_NOTPERMITTED
+      // (check if the relation names are either "RELATIONCAT" and "ATTRIBUTECAT".
+      // you may use the following constants: RELCAT_RELNAME and ATTRCAT_RELNAME)
+  if (!strcmp(relName, RELCAT_RELNAME) || !strcmp(relName, ATTRCAT_RELNAME)) 
+  {
+    return E_NOTPERMITTED;
+  }
+  // if the relation is open
+      //    (check if OpenRelTable::getRelId() returns E_RELNOTOPEN)
+      //    return E_RELOPEN
+  if (OpenRelTable::getRelId(relName) != E_RELNOTOPEN) 
+  {
+    return E_RELOPEN;
+  }
+  
+  int retVal = BlockAccess::renameAttribute(relName, oldAttrName, newAttrName);
+  return retVal;
+}
