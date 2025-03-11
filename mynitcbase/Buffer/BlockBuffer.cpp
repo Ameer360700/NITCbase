@@ -102,7 +102,7 @@ int RecBuffer::getRecord(union Attribute *rec, int slotNum)
    buffer due to LRU buffer replacement. So, it will need to be bought back
    to the buffer before any operations can be done.
  */
-int BlockBuffer::loadBlockAndGetBufferPtr(unsigned char ** buffPtr) 
+int BlockBuffer::loadBlockAndGetBufferPtr(unsigned char ** bufferPtr) 
 {
   /* check whether the block is already present in the buffer
      using StaticBuffer.getBufferNum() */
@@ -120,27 +120,25 @@ int BlockBuffer::loadBlockAndGetBufferPtr(unsigned char ** buffPtr)
       // Read the block into the free buffer using readBlock()
 
   // store the pointer to this buffer (blocks[bufferNum]) in *buffPtr
-  if (bufferNum != E_BLOCKNOTINBUFFER)
+  if (bufferNum == E_BLOCKNOTINBUFFER) 
   {
-    for (int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++)
+    bufferNum = StaticBuffer::getFreeBuffer(this->blockNum);
+    if (bufferNum == E_OUTOFBOUND)
+        return E_OUTOFBOUND;
+    Disk::readBlock(StaticBuffer::blocks[bufferNum], this->blockNum);
+  }
+  else 
+  {
+    for (int i = 0; i < BUFFER_CAPACITY; i++)
     {
-      StaticBuffer::metainfo[bufferIndex].timeStamp++;
+        if (!StaticBuffer::metainfo[i].free)
+            StaticBuffer::metainfo[i].timeStamp++;
     }
     StaticBuffer::metainfo[bufferNum].timeStamp = 0;
   }
-  else
-  {
-    bufferNum = StaticBuffer::getFreeBuffer(this->blockNum);
 
-    if (bufferNum == E_OUTOFBOUND)
-    {
-      return E_OUTOFBOUND;
-    }
+  *bufferPtr = StaticBuffer::blocks[bufferNum];
 
-    Disk::readBlock(StaticBuffer::blocks[bufferNum], this->blockNum);
-  }
-  // store the pointer to this buffer (blocks[bufferNum]) in *buffPtr
-  *buffPtr = StaticBuffer::blocks[bufferNum];
   return SUCCESS;
 }
 
@@ -164,7 +162,7 @@ int RecBuffer::setRecord(union Attribute *rec, int slotNum)
   int attrCount = head.numAttrs;   
   int slotCount = head.numSlots;  
   // if input slotNum is not in the permitted range return E_OUTOFBOUND.
-  if(slotNum>slotCount or slotNum<0)
+  if(slotNum<0 || slotNum>=slotCount)
   {
     return E_OUTOFBOUND;
   }
@@ -176,8 +174,8 @@ int RecBuffer::setRecord(union Attribute *rec, int slotNum)
      (hint: a record will be of size ATTR_SIZE * numAttrs)
   */
   int recordSize = attrCount * ATTR_SIZE;
-  int offset = HEADER_SIZE + slotCount + (recordSize * slotNum);
-  memcpy(bufferPtr + offset, rec, recordSize);
+  unsigned char* recordPtr = bufferPtr + HEADER_SIZE + slotCount + slotNum*recordSize;
+  memcpy(recordPtr, rec, recordSize);
   // update dirty bit using setDirtyBit()
   /* (the above function call should not fail since the block is already
      in buffer and the blockNum is valid. If the call does fail, there
@@ -292,19 +290,22 @@ int BlockBuffer::getFreeBlock(int blockType){
 
   // iterate through the StaticBuffer::blockAllocMap and find the block number
   // of a free block in the disk.
-  int blockNum;
-  for (blockNum = 0; blockNum < DISK_BLOCKS; blockNum++) {
-    if (StaticBuffer::blockAllocMap[blockNum] == UNUSED_BLK) {
+  int freeblock=-1;
+  for (int blockNum = 0; blockNum < DISK_BLOCKS; blockNum++) 
+  {
+    if (StaticBuffer::blockAllocMap[blockNum] == UNUSED_BLK)
+    {
+      freeblock=blockNum;
       break;
     }
   }
   // if no block is free, return E_DISKFULL.
-  if (blockNum == DISK_BLOCKS)
+  if (freeblock == -1)
       return E_DISKFULL;
   // set the object's blockNum to the block number of the free block.
-  this->blockNum=blockNum;
+  this->blockNum=freeblock;
   // find a free buffer using StaticBuffer::getFreeBuffer() .
-  int bufferNum=StaticBuffer::getFreeBuffer(blockNum);
+  int bufferNum=StaticBuffer::getFreeBuffer(freeblock);
   struct HeadInfo head;
   head.pblock=-1;
   head.lblock=-1;
@@ -312,15 +313,15 @@ int BlockBuffer::getFreeBlock(int blockType){
   head.numEntries = 0;
   head.numAttrs = 0;
   head.numSlots = 0;
-  setHeader(&head); 
+  this->setHeader(&head); 
   // initialize the header of the block passing a struct HeadInfo with values
   // pblock: -1, lblock: -1, rblock: -1, numEntries: 0, numAttrs: 0, numSlots: 0
   // to the setHeader() function.
-  setBlockType(blockType);
+  this->setBlockType(blockType);
   // update the block type of the block to the input block type using setBlockType().
  
   // return block number of the free block.
-  return blockNum;
+  return freeblock;
 }
 
 int RecBuffer::setSlotMap(unsigned char *slotMap) 
@@ -346,9 +347,7 @@ int RecBuffer::setSlotMap(unsigned char *slotMap)
   // update dirty bit using StaticBuffer::setDirtyBit
   // if setDirtyBit failed, return the value returned by the call
   int dirty=StaticBuffer::setDirtyBit(this->blockNum);
-  if(dirty!=SUCCESS)
-    return dirty;
-  return SUCCESS;
+  return dirty;
 }
 
 int BlockBuffer::getBlockNum()

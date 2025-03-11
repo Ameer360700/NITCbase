@@ -86,6 +86,10 @@ int RelCacheTable::setSearchIndex(int relId, RecId *searchIndex)
 
 int RelCacheTable::resetSearchIndex(int relId) 
 {
+  if (relId < 0 || relId >= MAX_OPEN) 
+  {
+    return E_OUTOFBOUND;
+  }
   // use setSearchIndex to set the search index to {-1, -1}
   RecId sIndex = {-1, -1};
   return setSearchIndex(relId, &sIndex);
@@ -121,7 +125,7 @@ int RelCacheTable::setRelCatEntry(int relId, RelCatEntry *relCatBuf) {
 
   // copy the relCatBuf to the corresponding Relation Catalog entry in
   // the Relation Cache Table.
-  memcpy(&(RelCacheTable::relCache[relId]->relCatEntry), relCatBuf, sizeof(RelCatEntry));
+  RelCacheTable::relCache[relId]->relCatEntry=*relCatBuf;
   RelCacheTable::relCache[relId]->dirty = true;
   // set the dirty flag of the corresponding Relation Cache entry in
   // the Relation Cache Table.

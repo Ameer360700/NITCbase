@@ -21,7 +21,7 @@ int Schema::openRel(char*relName)
   
 int Schema::closeRel(char*relName) 
 {
-    if (!strcmp(relName,RELCAT_RELNAME) || !strcmp(relName,ATTRCAT_RELNAME))
+    if (strcmp(relName,RELCAT_RELNAME)==0 || strcmp(relName,ATTRCAT_RELNAME)==0)
     {
       return E_NOTPERMITTED;
     }
@@ -70,7 +70,7 @@ int Schema::renameAttr(char *relName, char *oldAttrName, char *newAttrName)
       // return E_NOTPERMITTED
       // (check if the relation names are either "RELATIONCAT" and "ATTRIBUTECAT".
       // you may use the following constants: RELCAT_RELNAME and ATTRCAT_RELNAME)
-  if (!strcmp(relName, RELCAT_RELNAME) || !strcmp(relName, ATTRCAT_RELNAME)) 
+  if (strcmp(relName, RELCAT_RELNAME)==0 || !strcmp(relName, ATTRCAT_RELNAME)==0) 
   {
     return E_NOTPERMITTED;
   }
